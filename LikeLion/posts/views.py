@@ -125,8 +125,10 @@ def post_list(request):
 @require_http_methods(["GET"])   # 특정 게시물에 포함된 모든 comment를 조회
 def comment_list(request, post_id):
 
-    post = get_object_or_404(Post, pk=post_id) # post_id 에 해당하는 Post 데이터 가져오기
+    # post_id 에 해당하는 Post 데이터 가져오기
+    post = get_object_or_404(Post, pk=post_id) 
 
+    # 특정 게시물의 comment만 추출
     comment_all = Comment.objects.filter(post=post)
 
     comment_all_json = []
@@ -148,9 +150,11 @@ def comment_list(request, post_id):
 @require_http_methods(["GET"])   # 카테고리 별 게시글 조회
 def category_detail(request, category_id):
 
-    category = get_object_or_404(Category, pk=category_id) # category_id 에 해당하는 Post 데이터 가져오기
+    # category_id 에 해당하는 category 데이터 가져오기
+    category = get_object_or_404(Category, pk=category_id) 
 
-    post_all = Post.objects.filter(categories=category).order_by('-created_at')
+    # category 별 게시글만 추출 & 작성 최신순 정렬
+    post_all = Post.objects.filter(categories=category).order_by('-created_at') 
 
     post_all_json = []
 
