@@ -20,5 +20,6 @@ from posts.views import *
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('account/', include('accounts.urls')), # 추가하기
     path('posts/', include('posts.urls')),
 ]

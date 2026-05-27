@@ -5,11 +5,14 @@ from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticatedOrReadOnly # jwt 세션
+from .permissions import TimeRestrictedPermission, IsAuthorReadOnly
 
 from .models import Post, Comment
 from .serializers import PostSerializer, CommentSerializer
 
 class PostList(APIView):
+    permission_classes = [TimeRestrictedPermission]
     # 새로운 게시글 작성 (POST 요청)
     def post(self, request, format=None):
         serializer = PostSerializer(data=request.data)
@@ -25,6 +28,7 @@ class PostList(APIView):
         return Response(serializer.data)
     
 class PostDetail(APIView):
+    permission_classes = [TimeRestrictedPermission, IsAuthenticatedOrReadOnly, IsAuthorReadOnly]
     # 특정 게시글 상세 정보 가져오기 (GET 요청)
     def get(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
@@ -34,6 +38,9 @@ class PostDetail(APIView):
     # 특정 게시물 정보 수정하기 (PUT 요청)
     def put(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
+
+        self.check_object_permissions(request, post)
+
         serializer = PostSerializer(post, data=request.data)
         if serializer.is_valid(): # update이니까 유효성 검사 필요
             serializer.save()
@@ -43,6 +50,9 @@ class PostDetail(APIView):
     # 특정 게시물 삭제하기 (DELETE 요청)
     def delete(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
+
+        self.check_object_permissions(request, post)
+
         post.delete()
         return Response(
             {
@@ -53,6 +63,7 @@ class PostDetail(APIView):
         )
     
 class CommentList(APIView):
+    permission_classes = [TimeRestrictedPermission]
     # 특정 게시글의 모든 댓글 가져오기 (GET 요청)
     def get(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
@@ -80,6 +91,7 @@ class CommentList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CommentDetail(APIView):
+    permission_classes = [TimeRestrictedPermission]
     # 특정 게시글에 댓글 삭제
     def delete(self, request, post_id, comment_id):
         post = get_object_or_404(Post, id=post_id)
