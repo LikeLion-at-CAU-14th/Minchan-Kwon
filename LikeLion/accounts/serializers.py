@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import RefreshToken
 from .models import *
 
 # 회원가입용 시리얼라이저
@@ -68,5 +69,38 @@ class AuthSerializer(serializers.ModelSerializer):
         
         # 딕셔너리로 변환
         data['user'] = user
+
+        return data
+
+class OAuthSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
+    email = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ['username','email']
+
+    def validate(self, data):
+        username = data.get('username', None)
+        email = data.get('email', None)
+
+        if email is None:
+            raise serializers.ValidationError('Email does not exist.')
+        
+        user = User.get_user_by_email(email=email)
+        
+        # 존재하지 않는 회원이면 새롭게 가입
+        if user is None:
+            user = User.objects.create(username=username, email=email)
+    
+        token = RefreshToken.for_user(user)
+        refresh_token = str(token)
+        access_token = str(token.access_token)
+
+        data = {
+            "user": user,
+            "refresh_token": refresh_token,
+            "access_token": access_token,
+        }
 
         return data
