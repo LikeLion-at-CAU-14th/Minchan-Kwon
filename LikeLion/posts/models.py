@@ -50,3 +50,10 @@ class Comment(BaseModel): # 작성 시간과 수정 시간을 저장하기 위�
     # 누락되었던 def __str__(self): 메서드 추가하였습니다.
     def __str__(self):
         return f"Comment {self.id} on {self.post.title}"
+    
+class Image(BaseModel):
+    id = models.AutoField(primary_key=True)
+    image_url = models.URLField(max_length=500)  # S3에 업로드된 이미지의 URL 저장
+
+    def __str__(self):
+        return f"Image {self.id}"
