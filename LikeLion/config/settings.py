@@ -15,8 +15,15 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+secret_file = os.path.join(BASE_DIR, 'secrets.json') 
+
+with open(secret_file) as f:
+    secrets = json.loads(f.read())
+
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -24,6 +31,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+
+def get_secret(setting, secrets=secrets):
+# secret 변수를 가져오거나 그렇지 못 하면 예외를 반환
+    try:
+        return secrets[setting]
+    except KeyError:
+        error_msg = "Set the {} environment variable".format(setting)
+        raise ImproperlyConfigured(error_msg)
+
+SECRET_KEY = get_secret("SECRET_KEY")
 
 # Application definition
 
@@ -91,15 +108,26 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'likelion14th',
+#         'USER': 'root',
+#         'PASSWORD': '@gmc8496@',
+#         'HOST': '127.0.0.1',
+#         'PORT': '3306',
+#     }
+# }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'likelion14th',
-        'USER': 'root',
-        'PASSWORD': '@gmc8496@',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-    }
+'default': {
+'ENGINE': 'django.db.backends.mysql',
+'NAME': 'likelion14th', # likelion14th
+'USER': get_secret("DB_USER"),
+'PASSWORD': get_secret("DB_PW"),
+'HOST': '127.0.0.1',
+'PORT': '3308',
+}
 }
 
 # Password validation
@@ -135,21 +163,6 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
-secret_file = os.path.join(BASE_DIR, 'secrets.json') 
-
-with open(secret_file) as f:
-    secrets = json.loads(f.read())
-
-def get_secret(setting, secrets=secrets): 
-# secret 변수를 가져오거나 그렇지 못 하면 예외를 반환
-    try:
-        return secrets[setting]
-    except KeyError:
-        error_msg = "Set the {} environment variable".format(setting)
-        raise ImproperlyConfigured(error_msg)
-
-SECRET_KEY = get_secret("SECRET_KEY")
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -205,6 +218,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ( # DRF의 기본 인증Authentication 방식을 JWT로 바꿉니다.
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # 커스텀 예외 처리 함수 지정
+    'EXCEPTION_HANDLER': 'config.custom_api_exception_handler.custom_api_exception_handler'
 }
 
 REST_USE_JWT = True
@@ -244,3 +259,17 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
 }
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    #"django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  
+    "config.middleware.ExceptionHandlerMiddleware",  # 커스텀 예외 처리 미들웨어 추가
+]
+
