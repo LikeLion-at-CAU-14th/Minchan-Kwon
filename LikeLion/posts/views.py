@@ -137,14 +137,14 @@ class CommentList(APIView):
     # 특정 게시글에 댓글 작성
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
-
         serializer = CommentSerializer(data=request.data)
 
-        if serializer.is_valid():
-            serializer.save(post=post)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.is_valid(raise_exception=True)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save(post=post)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CommentDetail(APIView):
     permission_classes = [TimeRestrictedPermission]

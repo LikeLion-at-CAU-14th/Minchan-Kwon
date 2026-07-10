@@ -63,7 +63,8 @@ def _extract_error_detail(error_data):
         
         if field_errors:
             return {
-                'message': f"{len(field_errors)} validation errors occurred",
+                # 정보가 담겨있는 error_data를 반환하도록 message 변경
+                'message': error_data,
                 'code': 'validation_error',
                 'errors': field_errors,
                 'field_details': error_data
