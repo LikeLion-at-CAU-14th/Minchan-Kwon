@@ -2,10 +2,13 @@ import os
 import uuid
 import boto3
 
+from config.custom_exceptions import PostNotFoundException
+
 from django.shortcuts import get_object_or_404
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.core.files.storage import default_storage  
 from django.conf import settings
+from django.views.decorators.http import require_http_methods
 
 # DRF 관련 import
 from rest_framework.views import APIView
@@ -31,13 +34,14 @@ class PostList(APIView):
         request_body=PostSerializer,
         responses={201: PostSerializer, 400: "잘못된 요청"},
     )
+
     # 새로운 게시글 작성 (POST 요청)
     def post(self, request, format=None):
         serializer = PostSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(
         operation_summary="게시글 목록 조회",
@@ -133,14 +137,14 @@ class CommentList(APIView):
     # 특정 게시글에 댓글 작성
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
-
         serializer = CommentSerializer(data=request.data)
 
-        if serializer.is_valid():
-            serializer.save(post=post)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.is_valid(raise_exception=True)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save(post=post)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CommentDetail(APIView):
     permission_classes = [TimeRestrictedPermission]
@@ -218,28 +222,19 @@ class ImageUploadView(APIView):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-class PostList(APIView):
-    permission_classes = [IsAvailableTime, IsOwnerOrReadOnly]
-    @swagger_auto_schema(
-            operation_summary="게시글 생성",
-            operation_description="새로운 게시글을 생성합니다.",
-            request_body=PostSerializer,  # 요청 데이터의 스키마 정의
-            responses={201: PostSerializer, 400: "잘못된 요청"},  # 응답 데이터의 스키마 정의
-    )
-    def post(self, request, format=None):
-        serializer = PostSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @swagger_auto_schema(
-        operation_summary="게시글 목록 조회",
-        operation_description="모든 게시글을 조회합니다.",
-        responses={200: PostSerializer(many=True)}
-    )
-    def get(self, request, format=None):
-        posts = Post.objects.all()
-	    # 많은 post들을 받아오려면 (many=True) 써줘야 한다!
-        serializer = PostSerializer(posts, many=True)
-        return Response(serializer.data)
+@require_http_methods(["GET"])
+def get_post_detail(reqeust, id):
+    try:
+        post = Post.objects.get(id=id)
+        post_detail_json = {
+            "id" : post.id,
+            "title" : post.title,
+            "content" : post.content,
+            "status" : post.status,
+            "user" : post.user.username
+        }
+        return JsonResponse({
+            "status" : 200,
+            "data": post_detail_json})
+    except Post.DoesNotExist:
+        raise PostNotFoundException
